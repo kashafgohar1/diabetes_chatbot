@@ -1,0 +1,383 @@
+# =============================================================================
+# Diabetes Triage Chatbot — Clinical Protocol
+# =============================================================================
+# THIS FILE IS THE SINGLE SOURCE OF CLINICAL TRUTH FOR THE DECISION ENGINE.
+#
+# Status: PENDING CLINICAL REVIEW. Nothing in this file has been approved by
+# a clinician. It is a machine-readable transcription of
+# docs/Provisional_Clinical_logic_draft.xlsx, prepared by Kashaf Gohar, plus
+# engineering safety nets added to close gaps that draft does not cover.
+#
+# To swap in an approved protocol: edit this file's rules (tier, criteria,
+# sources, status) and the rule functions named by `implemented_by` in
+# src/diabetes_chatbot/engine/rules.py. Do NOT touch the pipeline. Changing
+# a rule here should break its named test (pytest -k <RULE_ID>) until the
+# rule function is updated to match — that broken test is the traceability
+# link between this document and the code that enforces it.
+#
+# See docs/CLINICIAN_REVIEW.md for the full narrative of every open question,
+# invented rule and wording decision that needs sign-off.
+# =============================================================================
+
+protocol_version: "0.1.0-draft"
+approval_status: PENDING_CLINICAL_REVIEW
+allow_patient_use: false  # mirrored by config.Settings.allow_patient_use; must default False.
+
+prototype_banner: >-
+  ⚠️ PROTOTYPE — NOT FOR REAL PATIENT USE. These clinical rules are
+  provisional and have not been reviewed or approved by a clinician. This
+  tool does not diagnose and does not replace medical care. If this is a
+  medical emergency, go to the nearest hospital now.
+
+source_document: docs/Provisional_Clinical_logic_draft.xlsx
+prepared_by: Kashaf Gohar
+project: "MS AI Capstone, LUMS — diabetes triage chatbot for Shalamar Hospital, Lahore"
+
+tiers:
+  1: "Home management / low priority"
+  2: "Management at a BHU (Basic Health Unit) / routine clinical follow-up"
+  3: "Shalamar Hospital or nearest tertiary facility (emergency)"
+
+references:
+  REF-01: "NIDDK — Low Blood Glucose (Hypoglycemia)"
+  REF-02: "NIDDK — Symptoms & Causes of Diabetes"
+  REF-03: "MedlinePlus — Hyperglycemia"
+  REF-04: "NIDDK — foot care booklet"
+  REF-05: "NHS — Low blood sugar (hypoglycaemia)"
+  REF-06: "NHS — Diabetic ketoacidosis (DKA)"
+  REF-07: "NHS — Type 1 diabetes symptoms"
+  REF-09: "NHS — Type 2 diabetes symptoms"
+  PROFESSOR: "Course instructor, non-negotiable safety directive"
+  PROJECT_DESIGN: "Project design decision (G4 conservative-default)"
+  NOT_SOURCED: "No cited clinical source in the provisional draft"
+  ENGINEERING_SAFETY_NET: "Not in the provisional draft; added because silence would under-triage"
+
+# -----------------------------------------------------------------------------
+# Rules. Every rule has exactly one pure function implementing it, named in
+# `implemented_by`, in src/diabetes_chatbot/engine/rules.py. `invented: true`
+# marks a rule Kashaf's professor asked for but that is not in the
+# provisional spreadsheet. `unsourced: true` marks D3, which the spreadsheet
+# includes but cites no source for. Both flags must be surfaced on every
+# decision and audit entry that uses the rule — see engine/types.py
+# RuleResult.invented / .unsourced.
+# -----------------------------------------------------------------------------
+rules:
+  A1:
+    category: hypoglycemia
+    scenario: "Severe hypoglycemia"
+    criteria: >-
+      Mild/moderate symptoms (shaky, hungry, sweaty, mildly confused); able
+      to self-treat and swallow safely.
+    tier: 1
+    sources: [REF-01, REF-05]
+    status: PENDING_CLINICAL_REVIEW
+    invented: false
+    unsourced: false
+    open_questions: [OQ-7]
+    implemented_by: rule_a1
+
+  A2:
+    category: hypoglycemia
+    scenario: "Severe hypoglycemia"
+    criteria: >-
+      Frequent hypos, past severe hypos, night hypos, or impaired awareness
+      of symptoms.
+    tier: 2
+    sources: [REF-05]
+    status: PENDING_CLINICAL_REVIEW
+    invented: false
+    unsourced: false
+    open_questions: [OQ-7]
+    implemented_by: rule_a2
+
+  A3:
+    category: hypoglycemia
+    scenario: "Severe hypoglycemia"
+    criteria: >-
+      Loss of consciousness, seizure, unable to swallow safely, or not
+      responding normally.
+    tier: 3
+    sources: [REF-01, REF-05]
+    status: PENDING_CLINICAL_REVIEW
+    invented: false
+    unsourced: false
+    open_questions: []
+    implemented_by: rule_a3
+
+  A4:
+    category: hypoglycemia
+    scenario: "Severe hypoglycemia — conscious but cannot reach sugar unaided"
+    criteria: >-
+      Conscious, able to swallow safely, but unable to get to sugar/treatment
+      unaided (e.g. alone, immobile, no one available to help) — satisfies
+      neither A1 (able to self-treat) nor A3 (unconscious/seizure/cannot
+      swallow), and would otherwise fall through to a lower tier.
+    tier: 3
+    sources: []
+    status: PENDING_CLINICAL_REVIEW
+    invented: true
+    unsourced: true
+    open_questions: [OQ-4]
+    origin: "Added to close the OQ-4 gap between A1 and A3. Not in the original draft."
+    implemented_by: rule_a4
+
+  B1:
+    category: hyperglycemia_dka
+    scenario: "DKA / severe hyperglycemia"
+    criteria: >-
+      Isolated hyperglycemia symptoms (thirst, fatigue, frequent urination,
+      blurred vision); no vomiting, breathing change or confusion.
+    tier: 2
+    sources: [REF-03]
+    status: PENDING_CLINICAL_REVIEW
+    invented: false
+    unsourced: false
+    open_questions: [OQ-9]
+    implemented_by: rule_b1
+
+  B2:
+    category: hyperglycemia_dka
+    scenario: "DKA / severe hyperglycemia"
+    criteria: >-
+      Persistent vomiting, abdominal pain, fruity breath, deep/fast
+      breathing, confusion or drowsiness, known high ketones, OR any
+      DKA-type symptom in a person with no diabetes diagnosis.
+    tier: 3
+    sources: [REF-02, REF-06]
+    status: PENDING_CLINICAL_REVIEW
+    invented: false
+    unsourced: false
+    open_questions: []
+    implemented_by: rule_b2
+
+  C1:
+    category: undiagnosed
+    scenario: "Possible undiagnosed diabetes"
+    criteria: >-
+      Increased thirst/urination/hunger, fatigue, blurred vision,
+      unexplained weight loss, slow-healing sores — no red flags.
+    tier: 2
+    tier_note: >-
+      Draft says "1/2" — cannot ship two tiers. Implemented as Tier 2 per
+      G4 (ambiguous case defaults to the higher-urgency tier). See OQ-1.
+    sources: [REF-02, REF-09]
+    status: PENDING_CLINICAL_REVIEW
+    invented: false
+    unsourced: false
+    open_questions: [OQ-1, OQ-9]
+    implemented_by: rule_c1
+
+  C2:
+    category: undiagnosed
+    scenario: "Possible undiagnosed diabetes"
+    criteria: >-
+      Any C1-type symptom plus rapid worsening, vomiting/diarrhoea, stomach
+      pain, drowsiness/confusion, or fast/deep breathing.
+    tier: 3
+    sources: [REF-07]
+    status: PENDING_CLINICAL_REVIEW
+    invented: false
+    unsourced: false
+    open_questions: []
+    implemented_by: rule_c2
+
+  D1:
+    category: foot
+    scenario: "Foot problems"
+    criteria: "Stable, non-infected wound or general foot discomfort."
+    tier: 1
+    sources: [REF-04]
+    status: PENDING_CLINICAL_REVIEW
+    invented: false
+    unsourced: false
+    open_questions: []
+    implemented_by: rule_d1
+
+  D2:
+    category: foot
+    scenario: "Foot problems"
+    criteria: >-
+      Signs of infection (redness, swelling, warmth, discharge, odour) or a
+      wound not healing.
+    tier: 2
+    sources: [REF-04]
+    source_note: "REF-04 (indirect)"
+    status: PENDING_CLINICAL_REVIEW
+    invented: false
+    unsourced: false
+    open_questions: []
+    implemented_by: rule_d2
+
+  D3:
+    category: foot
+    scenario: "Foot problems"
+    criteria: >-
+      Rapidly spreading redness, fever, or foot differs markedly in
+      colour/temperature from the other foot.
+    tier: 3
+    sources: []
+    status: PENDING_CLINICAL_REVIEW
+    invented: false
+    unsourced: true
+    open_questions: [OQ-2]
+    origin: >-
+      Marked NOT SOURCED in the provisional draft; the draft's own rationale
+      questions whether Tier 3 is right. Implemented as Tier 3 per G4, but
+      every decision using this rule is flagged unsourced.
+    implemented_by: rule_d3
+
+  G1:
+    category: global_override
+    scenario: "Global override — unresponsive/seizure"
+    criteria: >-
+      Any mention of unconsciousness, seizure, "can't wake up", or "not
+      responding", at any point in the conversation.
+    tier: 3
+    tier_note: "Override — supersedes any other rule outcome, from any conversation phase."
+    sources: [PROFESSOR]
+    status: PENDING_CLINICAL_REVIEW
+    invented: false
+    unsourced: false
+    open_questions: []
+    implemented_by: rule_g1
+
+  G2:
+    category: global_override
+    scenario: "Global override — insulin/medication dose request"
+    criteria: "Any request for an insulin or medication dose calculation or suggestion, under any framing."
+    tier: null
+    action: refuse_gracefully
+    sources: [PROFESSOR]
+    status: PENDING_CLINICAL_REVIEW
+    invented: false
+    unsourced: false
+    open_questions: []
+    implemented_by: rule_g2
+
+  G3:
+    category: global_override
+    scenario: "Global override — diagnostic assertion"
+    criteria: "Any output that would state or imply a diagnosis."
+    tier: null
+    action: refuse_gracefully
+    sources: [PROFESSOR]
+    status: PENDING_CLINICAL_REVIEW
+    invented: false
+    unsourced: false
+    open_questions: []
+    implemented_by: guardrail.output_guardrail.check_diagnostic_assertion
+    implemented_note: >-
+      G3 constrains rendered *output text*, not clinical state, so it is not
+      an engine/rules.py function — it lives in the deterministic output
+      guardrail, which runs after rendering and before send. See
+      src/diabetes_chatbot/guardrail/output_guardrail.py.
+
+  G4:
+    category: global_override
+    scenario: "Global override — ambiguity defaults high"
+    criteria: "Any case where the correct classification is ambiguous or uncertain."
+    tier: null
+    action: default_to_higher_tier_never_lower
+    sources: [PROJECT_DESIGN]
+    status: PENDING_CLINICAL_REVIEW
+    invented: false
+    unsourced: false
+    open_questions: [OQ-7]
+    implemented_note: >-
+      Not a prompt instruction and not a single function — implemented
+      structurally in engine.evaluate(): the engine may not emit a verdict
+      while an undetermined rule could still land at or above the current
+      best tier. It asks the next question instead. See engine/engine.py.
+
+  SN1:
+    category: engineering_safety_net
+    scenario: "Non-diabetes emergency"
+    criteria: "Chest pain, stroke signs, or severe breathing difficulty unrelated to diabetes symptoms."
+    tier: 3
+    tier_note: "Escalates and states the bot only handles diabetes, then exits."
+    sources: []
+    status: PENDING_CLINICAL_REVIEW
+    invented: true
+    unsourced: true
+    open_questions: []
+    origin: "Not covered by the draft at all. Added because silence would produce a lower-tier answer to a higher-tier situation."
+    implemented_by: rule_sn1_non_diabetes_emergency
+
+  SN2:
+    category: engineering_safety_net
+    scenario: "Pregnancy declared"
+    criteria: "Patient is pregnant (any trimester)."
+    tier: 3
+    tier_note: "Out of scope — every threshold changes in pregnancy. Escalates and exits."
+    sources: []
+    status: PENDING_CLINICAL_REVIEW
+    invented: true
+    unsourced: true
+    open_questions: []
+    origin: "Not covered by the draft at all."
+    implemented_by: rule_sn2_pregnancy
+
+  SN3:
+    category: engineering_safety_net
+    scenario: "Nothing fires, no further question would change the outcome"
+    criteria: "All applicable rules resolved to does-not-fire and no unresolved rule remains."
+    tier: 2
+    tier_note: "Safety-netting fallback. G4 forbids defaulting to Tier 1."
+    sources: []
+    status: PENDING_CLINICAL_REVIEW
+    invented: true
+    unsourced: true
+    open_questions: []
+    origin: "Not covered by the draft at all."
+    implemented_by: rule_sn3_fallback_safety_net
+
+# -----------------------------------------------------------------------------
+# Known gaps in the draft (OQ-*) — recorded here so a protocol reader sees
+# them next to the rules they affect, and duplicated in
+# docs/CLINICIAN_REVIEW.md with full narrative for the clinical meeting.
+# -----------------------------------------------------------------------------
+open_questions:
+  OQ-1:
+    affects: [C1]
+    summary: >-
+      C1 returns two tiers ("1/2") in the draft. Something has to be sent to
+      the patient. Implemented as Tier 2 per G4.
+    resolution: IMPLEMENTED_AS_TIER_2
+  OQ-2:
+    affects: [D3]
+    summary: >-
+      D3 is marked NOT SOURCED in the draft, and its own rationale questions
+      whether Tier 3 is right. Implemented as Tier 3, flagged unsourced on
+      every decision that uses it.
+    resolution: IMPLEMENTED_AS_TIER_3_UNSOURCED
+  OQ-4:
+    affects: [A1, A3, A4]
+    summary: >-
+      Gap between A1 (able to self-treat and swallow) and A3 (unconscious /
+      seizure / cannot swallow). A conscious person who cannot get to sugar
+      unaided satisfies neither and would fall through to a lower tier.
+      Added rule A4 at Tier 3 to close it.
+    resolution: IMPLEMENTED_AS_NEW_RULE_A4
+  OQ-7:
+    affects: [A1, A2, G4]
+    summary: >-
+      A1 and A2 can both apply (mild symptoms now, recurrent hypos
+      historically). Higher tier wins per G4; both rule IDs are reported.
+    resolution: HIGHER_TIER_WINS_BOTH_IDS_REPORTED
+  OQ-8:
+    affects: []
+    summary: >-
+      No rule uses a numeric glucose value. Value and unit are captured for
+      the audit trail but never used by any rule. A bare number with no unit
+      must trigger a clarifying question — 20 mg/dL and 20 mmol/L are
+      crises in opposite directions, and Pakistan uses mg/dL, so the unit is
+      never guessed.
+    resolution: CAPTURED_NOT_ACTED_ON_UNIT_CLARIFIED
+  OQ-9:
+    affects: [B1, C1]
+    summary: >-
+      B1 and C1 are absence rules ("no red flags present"). An unasked
+      question must never be read as "no" — the engine only concludes
+      absence once the relevant question has been asked and answered no,
+      never from silence.
+    resolution: TRI_STATE_UNKNOWN_NEVER_READ_AS_NO
