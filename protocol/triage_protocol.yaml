@@ -46,7 +46,9 @@ references:
   REF-05: "NHS — Low blood sugar (hypoglycaemia)"
   REF-06: "NHS — Diabetic ketoacidosis (DKA)"
   REF-07: "NHS — Type 1 diabetes symptoms"
+  REF-08: "NHS — Type 1 diabetes (overview; general long-term complication framing) — not currently cited by any rule"
   REF-09: "NHS — Type 2 diabetes symptoms"
+  REF-10: "NHS — Type 2 diabetes (overview; general long-term complication framing) — not currently cited by any rule"
   PROFESSOR: "Course instructor, non-negotiable safety directive"
   PROJECT_DESIGN: "Project design decision (G4 conservative-default)"
   NOT_SOURCED: "No cited clinical source in the provisional draft"
@@ -69,6 +71,13 @@ rules:
       Mild/moderate symptoms (shaky, hungry, sweaty, mildly confused); able
       to self-treat and swallow safely.
     tier: 1
+    chatbot_action: >-
+      Walk patient through NHS self-treatment steps: fast-acting sugar ->
+      recheck blood glucose in 10-15 min -> repeat if still low -> follow
+      with longer-acting carbohydrate.
+    rationale: >-
+      Matches NHS self-treatment protocol and NIDDK's "mild-to-moderate"
+      hypoglycemia symptom band.
     sources: [REF-01, REF-05]
     status: PENDING_CLINICAL_REVIEW
     invented: false
@@ -83,6 +92,12 @@ rules:
       Frequent hypos, past severe hypos, night hypos, or impaired awareness
       of symptoms.
     tier: 2
+    chatbot_action: >-
+      Advise routine follow-up at BHU for treatment-plan review (explicitly
+      not framed as an emergency).
+    rationale: >-
+      Matches NHS "see a GP if..." criteria for recurring or unrecognized
+      hypoglycemia.
     sources: [REF-05]
     status: PENDING_CLINICAL_REVIEW
     invented: false
@@ -97,6 +112,12 @@ rules:
       Loss of consciousness, seizure, unable to swallow safely, or not
       responding normally.
     tier: 3
+    chatbot_action: >-
+      Immediately return emergency escalation message; global override
+      bypasses remaining conversation flow regardless of current stage.
+    rationale: >-
+      Matches NIDDK "severe" hypoglycemia band and NHS explicit
+      seizure/unconsciousness criteria.
     sources: [REF-01, REF-05]
     status: PENDING_CLINICAL_REVIEW
     invented: false
@@ -128,6 +149,11 @@ rules:
       Isolated hyperglycemia symptoms (thirst, fatigue, frequent urination,
       blurred vision); no vomiting, breathing change or confusion.
     tier: 2
+    chatbot_action: >-
+      Advise BHU follow-up with explicit safety-netting instructions on
+      symptoms that would require escalation.
+    rationale: >-
+      Matches NIH/NLM hyperglycemia symptom list; no DKA red flags present.
     sources: [REF-03]
     status: PENDING_CLINICAL_REVIEW
     invented: false
@@ -143,11 +169,17 @@ rules:
       breathing, confusion or drowsiness, known high ketones, OR any
       DKA-type symptom in a person with no diabetes diagnosis.
     tier: 3
+    chatbot_action: "Immediately return emergency escalation message."
+    rationale: >-
+      Matches NHS explicit call-999/A&E criteria (incl. the
+      undiagnosed-person clause) and NIDDK DKA symptom list. The draft
+      itself flags that NHS ketone thresholds (3 mmol/L blood, 2+ urine)
+      assume home ketone-testing access — see OQ-10.
     sources: [REF-02, REF-06]
     status: PENDING_CLINICAL_REVIEW
     invented: false
     unsourced: false
-    open_questions: []
+    open_questions: [OQ-10]
     implemented_by: rule_b2
 
   C1:
@@ -160,6 +192,13 @@ rules:
     tier_note: >-
       Draft says "1/2" — cannot ship two tiers. Implemented as Tier 2 per
       G4 (ambiguous case defaults to the higher-urgency tier). See OQ-1.
+    chatbot_action: >-
+      Advise that symptoms warrant a diabetes test; direct to BHU or
+      nearest testing facility; explicitly framed as non-urgent, not an
+      emergency.
+    rationale: >-
+      Matches NIDDK common symptom list and NHS "non-urgent advice: see a
+      GP" framing.
     sources: [REF-02, REF-09]
     status: PENDING_CLINICAL_REVIEW
     invented: false
@@ -174,6 +213,10 @@ rules:
       Any C1-type symptom plus rapid worsening, vomiting/diarrhoea, stomach
       pain, drowsiness/confusion, or fast/deep breathing.
     tier: 3
+    chatbot_action: >-
+      Immediately return emergency message, framed as "this may already be
+      a diabetes emergency, not just diabetes starting."
+    rationale: "Matches NHS type 1 symptoms page's own embedded emergency block."
     sources: [REF-07]
     status: PENDING_CLINICAL_REVIEW
     invented: false
@@ -186,6 +229,8 @@ rules:
     scenario: "Foot problems"
     criteria: "Stable, non-infected wound or general foot discomfort."
     tier: 1
+    chatbot_action: "Provide daily foot self-check guidance."
+    rationale: "Matches NIDDK foot care booklet guidance."
     sources: [REF-04]
     status: PENDING_CLINICAL_REVIEW
     invented: false
@@ -200,8 +245,12 @@ rules:
       Signs of infection (redness, swelling, warmth, discharge, odour) or a
       wound not healing.
     tier: 2
+    chatbot_action: "Advise BHU review."
+    rationale: >-
+      Inferred only from NIDDK/NHS general complication framing; requires
+      clinical input.
     sources: [REF-04]
-    source_note: "REF-04 (indirect)"
+    source_note: "REF-04 (indirect, not a direct sourced threshold)"
     status: PENDING_CLINICAL_REVIEW
     invented: false
     unsourced: false
@@ -215,6 +264,8 @@ rules:
       Rapidly spreading redness, fever, or foot differs markedly in
       colour/temperature from the other foot.
     tier: 3
+    chatbot_action: "Escalation to hospital."
+    rationale: "Draft's own note: \"Need confirmation whether we need to treat it as tier 3.\""
     sources: []
     status: PENDING_CLINICAL_REVIEW
     invented: false
@@ -381,3 +432,16 @@ open_questions:
       absence once the relevant question has been asked and answered no,
       never from silence.
     resolution: TRI_STATE_UNKNOWN_NEVER_READ_AS_NO
+  OQ-10:
+    affects: [B2]
+    summary: >-
+      The draft's own rationale for B2 notes that the NHS ketone thresholds
+      (3 mmol/L blood, 2+ urine) it cites assume the patient has home
+      ketone-testing access, and asks for confirmation of applicability
+      before relying on a numeric ketone threshold. Most patients in this
+      deployment context will not have a home ketone meter/strips.
+      Implemented as symptom-cluster-only: B2 fires on the DKA symptom
+      cluster (vomiting, abdominal pain, fruity breath, deep/fast breathing,
+      confusion/drowsiness) or "known high ketones" as a reported symptom,
+      never on a numeric ketone value the bot itself asks for or interprets.
+    resolution: SYMPTOM_CLUSTER_ONLY_NO_NUMERIC_KETONE_THRESHOLD

@@ -86,7 +86,14 @@ def render_needs_info(info: NeedsInfo, role: Role | None) -> OutboundMessage:
 
 def render_verdict(verdict: Verdict, role: Role | None) -> OutboundMessage:
     label = blocks.TIER_LABELS[verdict.tier]
+    # Prefer rule-specific guidance (from the source draft's "Chatbot
+    # Action" column) for whichever fired rule decided this tier; fall back
+    # to the generic tier intro when no rule-specific text exists.
     intro = blocks.TIER_INTROS[verdict.tier]
+    for rule_id in verdict.fired_rule_ids:
+        if rule_id in blocks.RULE_SPECIFIC_GUIDANCE:
+            intro = blocks.RULE_SPECIFIC_GUIDANCE[rule_id]
+            break
     trigger_list = blocks.DEFAULT_TRIGGER_LISTS[verdict.tier]
     body = f"{label}\n\n{intro}\n\n{trigger_list}"
     if verdict.unsourced_rules_used:

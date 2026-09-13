@@ -315,6 +315,36 @@ UNSOURCED_NOTICE = (
     "rule that has not yet been reviewed by a clinician.)"
 )
 
+# Rule-specific guidance, drawn from the "Chatbot Action" column of
+# docs/Provisional_Clinical_logic_draft.xlsx (PENDING_CLINICAL_REVIEW, same
+# as everything else here). Used in place of the generic TIER_INTROS text
+# when the winning rule has more specific approved wording; falls back to
+# the generic tier intro otherwise (see renderer.render_verdict). Only
+# included where the source draft's wording adds real, safe, actionable
+# content beyond the generic tier message.
+RULE_SPECIFIC_GUIDANCE: dict[str, str] = {
+    "A1": (
+        "Based on what you've told me, this sounds like a mild hypo you can "
+        "treat yourself right now: have a fast-acting sugary food or drink, "
+        "recheck how you feel (or your blood glucose, if you can check it) "
+        "in 10-15 minutes, repeat the fast-acting sugar if you're still "
+        "feeling low, then follow up with a longer-acting carbohydrate "
+        "(like a slice of bread or a piece of fruit) once you feel better."
+    ),
+    "A2": (
+        "Based on what you've told me, this doesn't need emergency care "
+        "right now, but a pattern like this (frequent, severe, night-time, "
+        "or hard-to-notice hypos) is worth a treatment-plan review at a BHU "
+        "(Basic Health Unit) soon."
+    ),
+    "D1": (
+        "Based on what you've told me, this looks like something you can "
+        "manage at home for now. Check both feet daily for cuts, blisters, "
+        "redness, or swelling; keep the area clean and dry; and avoid "
+        "walking barefoot."
+    ),
+}
+
 
 def banner() -> str:
     return PROTOTYPE_BANNER

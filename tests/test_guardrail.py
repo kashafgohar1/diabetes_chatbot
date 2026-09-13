@@ -108,3 +108,7 @@ def test_all_approved_content_blocks_pass_the_guardrail():
             text = q.patient_text if role_key == "patient" else q.caregiver_text
             result = guard.evaluate(text, tier=None)
             assert result.passed, f"question text unexpectedly blocked: {text!r} -> {result.violations}"
+
+    for rule_id, text in blocks.RULE_SPECIFIC_GUIDANCE.items():
+        result = guard.evaluate(text, tier=None)
+        assert result.passed, f"rule-specific guidance for {rule_id} unexpectedly blocked: {result.violations}"

@@ -88,6 +88,22 @@ answered no** — never inferred from silence. This is enforced structurally
 by `state.TriState` (see §5) and is the single most safety-critical piece
 of the tri-state design.
 
+### OQ-10 — B2's ketone thresholds assume home testing access
+The real source document (`docs/Provisional_Clinical_logic_draft.xlsx`)
+carries a rationale note on B2 that wasn't visible before it was received:
+the NHS DKA ketone thresholds it cites (3 mmol/L blood, 2+ urine) assume
+the patient has home ketone-testing access, and the draft explicitly asks
+for confirmation of applicability, adding "if unavailable, rely on symptom
+cluster alone." Most patients in this deployment context will not have a
+home ketone meter or strips. **Implemented as symptom-cluster-only**: B2
+fires on the DKA symptom cluster (persistent vomiting, abdominal pain,
+fruity breath, deep/fast breathing, confusion/drowsiness) or "known high
+ketones" reported as a symptom — the bot never asks for, interprets, or
+acts on a numeric ketone value. **Needs clinical confirmation**: is
+symptom-cluster-only sufficient, or does omitting the numeric threshold
+entirely under-triage a case where ketones are known and high but no other
+symptom has yet appeared?
+
 ---
 
 ## 2. Rules invented by the engineering team (not in the draft)
@@ -125,6 +141,16 @@ clinically reviewed. In particular:
 4. **Pregnancy exit wording** — currently generic ("Because pregnancy is
    involved..."); does not attempt to route to a specific obstetric
    pathway because none was specified.
+4a. **A1 and D1 rule-specific guidance** (`content_blocks.RULE_SPECIFIC_GUIDANCE`)
+   — the source draft's own "Chatbot Action" text (step-by-step hypo
+   self-treatment for A1: fast-acting sugar → recheck in 10-15 min →
+   repeat if still low → longer-acting carbohydrate; a daily foot
+   self-check reminder for D1), lightly rephrased into direct
+   patient/caregiver-facing sentences. This is the same PENDING_CLINICAL_
+   REVIEW content as the rest of the draft, just carried through into the
+   actual message the bot sends rather than left only in the protocol
+   file — confirm the rephrasing hasn't drifted from the intended
+   clinical meaning before this goes anywhere near a real patient.
 5. **Under-18 exit wording** — still carries emergency safety-netting
    language per the success criteria, but the age cutoff itself (18) was
    given as a hard constraint, not derived clinically.
@@ -202,14 +228,35 @@ the model isn't deciding" conversation has concrete answers.
 
 ## 6. On the source spreadsheet
 
-`docs/Provisional_Clinical_logic_draft.xlsx` in this repository is a
-**reconstruction** of the rule table exactly as given in the project
-brief (the same 10 rows, IDs A1–D3/G1–G4, criteria, tiers, and source
-citations), generated because the original `.xlsx` file authored by
-Kashaf Gohar was not available inside this build session. If the original
-file differs from this reconstruction in any way, **the original file is
-authoritative** — replace the reconstruction and re-diff against
-`protocol/triage_protocol.yaml` before the next clinical review.
+`docs/Provisional_Clinical_logic_draft.xlsx` is the **original file**
+authored by Kashaf Gohar, two sheets: "Clinical Triage Rules" (the rule
+table) and "Clinical Guidance & References" (REF-01…REF-10). An earlier
+build of this repository shipped a reconstruction of just the rule table,
+generated because the original file wasn't available in that build
+session — the reconstruction was replaced with this real file once it was
+provided, and `protocol/triage_protocol.yaml` was re-diffed against it.
+
+**Result of that diff**: every rule ID, criterion, and tier already in
+`protocol/triage_protocol.yaml` matched the original file exactly — no
+tier or criterion changed. Three things the reconstruction didn't have
+were added:
+
+1. Per-rule `chatbot_action` and `rationale` fields (the source file's
+   "Chatbot Action" and "Rationale" columns), now carried in the protocol
+   file for every sourced rule. Two of these (A1's step-by-step
+   self-treatment guidance, and D1's daily foot self-check reminder) are
+   now used as the rule-specific message text in
+   `rendering/content_blocks.RULE_SPECIFIC_GUIDANCE` instead of the
+   generic tier-level message — see `renderer.render_verdict`. This is
+   still `PENDING_CLINICAL_REVIEW` wording, same as everything else, and
+   is called out again in §3 above for sign-off.
+2. **OQ-10** (§1 above), from B2's rationale note about ketone thresholds
+   assuming home-testing access.
+3. **REF-08 and REF-10** (Type 1/Type 2 overview pages, general long-term
+   complication framing) exist in the source's reference sheet but are not
+   cited by any rule in the rule table itself — added to
+   `protocol/triage_protocol.yaml`'s `references` section for completeness
+   but currently unused by any rule function.
 
 ---
 
