@@ -1,0 +1,10 @@
+# Pinned for reproducible builds. Regenerate with `pip freeze` after
+# deliberately upgrading, then re-run the full test suite.
+fastapi==0.141.1
+uvicorn[standard]==0.52.4
+pydantic==2.13.5
+PyYAML==6.0.3
+httpx==0.28.1
+pytest==9.1.1
+python-dotenv==1.2.3
+anthropic==1.5.0
